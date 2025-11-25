@@ -1,169 +1,72 @@
-Aqui está o **README.md completo**, já formatado em Markdown, pronto para você colocar no GitHub:
+## 🧮 Explicação do Código: Hash Table com Normalização
 
----
+-----
 
-# 🧩 Hash Table para Strings – Projeto de Função de Hash Personalizada
+### 1\. Pré-processamento: `normalize_string`
 
-Este projeto implementa uma **função de hash própria para nomes (strings)** e utiliza uma **tabela hash com tratamento de colisões por chaining**.
+Esta função é crucial para garantir que o hashing trate nomes semelhantes, mas com ou sem acentos, da mesma forma (ex: "João" e "Joao").
 
-O objetivo é demonstrar:
+  * **`import unicodedata`**: Importa o módulo para trabalhar com a Base de Dados de Caracteres Unicode.
+  * **`unicodedata.normalize('NFD', s)`**: Aplica a forma de **Normalização por Decomposição Canônica (NFD)**. Isso separa caracteres acentuados em sua **letra base** e seu **acento** (o marcador diacrítico).
+      * *Exemplo:* 'á' se torna 'a' + '́' (o acento agudo).
+  * **`unicodedata.category(c) != 'Mn'`**: Filtra os caracteres. `'Mn'` significa "Mark, Nonspacing" (Marca, Sem Espaçamento), que são os acentos.
+      * Ao filtrar os 'Mn', a função **remove todos os acentos**.
+  * **`.lower()`**: Converte a string resultante para **minúsculas**.
+  * **Resultado:** A string é padronizada, tornando o hash **insensível a acentos e case-insensitive** (não diferencia maiúsculas de minúsculas).
+      * *Exemplo:* `normalize_string("Márcio")` retorna `"marcio"`.
 
-* ✔ boa dispersão dos índices
-* ✔ baixa taxa de colisões
-* ✔ escolha adequada do tamanho da tabela
-* ✔ testes com 20+ nomes reais
-* ✔ análise do comportamento da função de hash
+-----
 
----
+### 2\. Função de Hashing Personalizada: `custom_hash`
 
-## 📌 Funcionalidades Implementadas
+Esta função calcula o valor hash usando o algoritmo **Polynomial Rolling Hash**.
 
-* Função de hash personalizada usando **rolling hash polinomial**
-* Normalização de strings (remove acentos e coloca minúsculas)
-* Tabela hash com **chaining** (listas encadeadas)
-* Escolha otimizada do tamanho da tabela (número primo)
-* Testes com mais de 20 nomes com acentos, parecidos e compostos
-* Exibição do índice gerado para cada nome
-* Contagem de colisões e load factor
+  * **Normalização**: Primeiro, ela normaliza o `name` usando `normalize_string(name)`.
+  * **Inicialização**:
+      * `hash_value = 0`: O valor hash acumulado.
+      * `base = 131`: Uma base prima escolhida para garantir uma boa distribuição.
+      * `mod = 2**61 - 1`: Um primo grande (Mersenne-like) para o módulo, usado para evitar *overflow* e manter a distribuição uniforme.
+  * **Cálculo do Hash (Loop)**:
+    ```python
+    hash_value = (hash_value * base + ord(char)) % mod
+    ```
+      * Para cada caractere (`char`):
+        1.  O `hash_value` anterior é multiplicado pela `base`.
+        2.  O valor numérico do caractere (`ord(char)`, geralmente o código ASCII/Unicode) é adicionado.
+        3.  Tudo é calculado **módulo `mod`**.
+  * **Mapeamento para o Tamanho da Tabela**:
+    ```python
+    return hash_value % table_size
+    ```
+      * O hash final, que é um número muito grande, é calculado **módulo `table_size`** para produzir um índice válido dentro do array da tabela hash (de `0` a `table_size - 1`).
 
----
+-----
 
-# 🧠 Como funciona a Função de Hash?
+### 3\. Classe da Tabela Hash: `HashTable`
 
-A função de hash utiliza o método **polinomial rolling hash**, amplamente usado em algoritmos como Rabin–Karp.
+Esta classe gerencia a estrutura de dados da Tabela Hash.
 
-Fórmula geral:
+  * **`__init__(self, size)`**:
+      * Cria a lista interna `self.table`, que é uma lista de listas (ou *buckets*). Cada *bucket* é inicializado como uma lista vazia (`[[] for _ in range(size)]`).
+      * `self.collisions = 0`: Contador para rastrear o número de colisões.
+  * **`insert(self, key)`**:
+    1.  **Calcula o Índice**: `index = custom_hash(key, self.size)` usa a chave (`key`) para encontrar a posição correta.
+    2.  **Verifica Colisão**: `if self.table[index]: self.collisions += 1`
+          * Se o *bucket* no `index` já contiver elementos, significa que ocorreu uma **colisão**.
+    3.  **Encadeamento (Chaining)**: `self.table[index].append(key)`
+          * Adiciona a nova `key` à lista no índice calculado. Este é o método de **encadeamento**, onde múltiplas chaves que mapeiam para o mesmo índice são armazenadas na mesma lista.
 
-```
-H = (H * base + ord(char)) % table_size
-```
+-----
 
-Para este projeto:
+### 4\. Execução e Análise
 
-* `base = 131`
-  Um número clássico que produz excelente dispersão para strings.
+O código, em seguida, demonstra o uso:
 
-* `table_size = 31`
-  Número **primo**, ajudando a reduzir colisões.
-
-### ✔ Normalização
-
-Todos os nomes passam primeiro por:
-
-1. Remoção de acentos
-   (`Á → A`, `Ç → C`, `Ã → A`, etc.)
-2. Conversão para minúsculas
-
-Isso evita que **"João"** e **"joao"** gerem hashes completamente incompatíveis.
-
----
-
-# 🔄 Tratamento de Colisões
-
-O método escolhido foi **Chaining**, por ser:
-
-* simples
-* eficiente
-* ideal quando o load factor está abaixo de 0.75
-* flexível para múltiplas entradas no mesmo índice
-
-Cada posição da tabela contém uma **lista**.
-Se uma colisão ocorrer, o item é apenas adicionado ao final da lista.
-
----
-
-# 📏 Tamanho da Tabela Hash
-
-Foram utilizados 23 nomes de teste.
-Para uma boa dispersão, recomenda-se:
-
-* usar **números primos**
-* manter load factor < **0.75**
-
-### Escolha final:
-
-```
-Tamanho da tabela: 31
-Load factor: 23 / 31 ≈ 0.74
-```
-
-Perfeito para evitar clusters e minimizar colisões.
-
----
-
-# 🧪 Conjunto de Testes Usado
-
-Foram utilizados nomes reais com:
-
-* acentos
-* versões semelhantes (Pablo / Pabllo)
-* nomes compostos
-* iniciais parecidas
-* tamanhos diferentes
-
-Exemplo dos nomes:
-
-```
-João, João Silva, Ana Clara, Ana Cláudia, Andressa,
-André, Roberta, Roberto, Carla, Karl, Marcos, Marcus,
-Pablo, Pabllo, Marcia, Márcio, Julia, Júlio,
-Carlos, Karla, Ana, Ane, Anelise
-```
-
----
-
-# 📈 Resultados exibidos no console
-
-* Índice gerado para cada nome
-* Layout completo da tabela Hash
-* Todas as colisões contabilizadas
-* Load factor final
-
-Exemplo do output (parcial):
-
-```
-João           → índice 12
-Ana Clara      → índice 15
-Marcus         → índice 4
-Pabllo         → índice 23
-
-Total de colisões: 4
-Load factor: 23/31 = 0.74
-```
-
----
-
-# 📚 Estrutura do Código
-
-* `custom_hash()` → Função de hash personalizada
-* `HashTable` → Classe com inserção e tratamento de colisões
-* Normalização → Remoção de acentos e padronização
-* Testes → Inserção + impressão dos índices e da distribuição
-
----
-
-# 🖥️ Execução
-
-Basta rodar:
-
-```bash
-python3 hash_table.py
-```
-
-(ou o nome que você deu ao arquivo)
-
----
-
-# 📌 Possíveis Extensões
-
-Se quiser evoluir este projeto, você pode adicionar:
-
-* Hashing duplo (double hashing)
-* Linear probing ou quadratic probing
-* Gráfico real de distribuição (matplotlib)
-* Exportar dados para CSV
-* Benchmark de desempenho
-
----
-
-Se quiser, posso gerar **um PDF para anexar ao repositório**, ou criar **uma versão em Java**, **JavaScript**, **C** ou qualquer outra linguagem. Só pedir!
+1.  **Inicialização**: Cria a tabela com `tamanho_tabela = 16`.
+2.  **Inserção**: Itera sobre `nomes_teste`, inserindo-os e exibindo o índice.
+      * *Note as colisões intencionais:* Nomes como "João" e "João Silva" ou "Marcos" e "Marcus" tendem a colidir devido à similaridade de seus hashes.
+3.  **Análise Final**:
+      * Exibe a estrutura da tabela (índices com suas listas de chaves).
+      * Mostra o **Total de colisões**.
+      * Calcula o **Load Factor** ($\alpha$), que é a razão entre o número de itens (`len(nomes_teste)`) e o tamanho da tabela (`tamanho_tabela`).
+          * Um *load factor* alto ($> 1$) ou muito próximo de $1$ indica que a tabela está ficando cheia e as colisões são mais prováveis, o que pode degradar a performance de busca.
