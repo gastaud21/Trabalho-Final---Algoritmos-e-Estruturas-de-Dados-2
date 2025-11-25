@@ -1,8 +1,5 @@
 import unicodedata
 
-# --------------------------------------
-# 1. Função auxiliar para remover acentos
-# --------------------------------------
 def normalize_string(s: str) -> str:
     return ''.join(
         c for c in unicodedata.normalize('NFD', s)
@@ -10,35 +7,20 @@ def normalize_string(s: str) -> str:
     ).lower()
 
 
-# -------------------------------------------------------
-# 2. Função de Hash personalizada para nomes (strings)
-# -------------------------------------------------------
 def custom_hash(name: str, table_size: int) -> int:
-    """
-    Hash baseado em:
-    - Normalização (remove acentos e coloca minúsculo)
-    - Rolling hash polinomial
-    - Usa módulo grande e só no final reduz para o tamanho da tabela
-
-    Essa abordagem reduz padrões e melhora a dispersão,
-    diminuindo colisões mesmo com tabela pequena (ex: 15 posições).
-    """
     name = normalize_string(name)
 
     hash_value = 0
-    base = 131               # base boa para hashing de strings
-    mod  = 2**61 - 1         # primo grande (Mersenne-like)
+    base = 131
+    mod  = 2**61 - 1
 
     for char in name:
         hash_value = (hash_value * base + ord(char)) % mod
 
-    # Só aqui reduzimos para o tamanho da tabela
     return hash_value % table_size
 
 
-# -------------------------------------------------------
-# 3. Estrutura da Hash Table (usando Chaining)
-# -------------------------------------------------------
+
 class HashTable:
     def __init__(self, size: int):
         self.size = size
@@ -48,7 +30,6 @@ class HashTable:
     def insert(self, key: str) -> int:
         index = custom_hash(key, self.size)
 
-        # colisão = slot já ocupado (independente de ser igual ou não)
         if self.table[index]:
             self.collisions += 1
 
@@ -60,9 +41,6 @@ class HashTable:
             print(f"{i:02d}: {slot}")
 
 
-# -------------------------------------------------------
-# 4. Testes com +20 nomes
-# -------------------------------------------------------
 nomes_teste = [
     "João", "João Silva", "Ana Clara", "Ana Cláudia", "Andressa",
     "André", "Roberta", "Roberto", "Carla", "Karl", "Marcos",
@@ -70,9 +48,6 @@ nomes_teste = [
     "Júlio", "Carlos", "Karla"
 ]
 
-# -------------------------------------------------------
-# 5. Tamanho da tabela = 15 posições
-# -------------------------------------------------------
 tamanho_tabela = 16
 tabela = HashTable(tamanho_tabela)
 
